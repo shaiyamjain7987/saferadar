@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}New Report{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-7">
+    <div class="card p-4">
+      <h3 class="mb-3">File a Safety Report</h3>
+      <p class="text-muted">Report an Unsafe Act, Unsafe Condition, or Near-Miss you observed.</p>
+
+      <form method="post" enctype="multipart/form-data">
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Date of observation</label>
+            <input type="date" name="report_date" class="form-control" required>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Area / Activity</label>
+            <select name="area" class="form-select" required>
+              <option value="" disabled selected>Choose area/activity</option>
+              {% for area in areas %}
+                <option value="{{ area }}">{{ area }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Location</label>
+          <input type="text" name="location" class="form-control" placeholder="e.g. Near Tank 4, Unit 2" required>
+        </div>
+
+        <div class="mb-3">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <label class="form-label mb-0">What did you observe?</label>
+            <div class="d-flex gap-2 align-items-center">
+              <select id="micLang" class="form-select form-select-sm" style="width: auto;">
+                <option value="en-IN">🎙️ English</option>
+                <option value="hi-IN">🎙️ हिंदी (Hindi)</option>
+              </select>
+              <button type="button" id="micBtn" class="btn btn-sm btn-outline-primary mic-btn">
+                Speak
+              </button>
+            </div>
+          </div>
+          <textarea name="description" id="description" rows="5" class="form-control mt-2"
+                    placeholder="Type here, or choose a language and tap Speak..." required></textarea>
+          <div class="form-text" id="micStatus"></div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Attach a photo (optional)</label>
+          <input type="file" name="image" accept="image/png, image/jpeg" class="form-control">
+          <div class="form-text">Photos need an internet connection to upload — if you're offline, submit without a photo and the rest of the report will still be saved and synced.</div>
+        </div>
+
+        <button type="submit" id="submitBtn" class="btn btn-primary w-100">Submit Report</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Offline-first submission: if there's no connection (or the request
+  // fails), queue the text fields locally instead of losing the report.
+  // Image uploads are skipped in offline mode (see note above the button).
+  const reportForm = document.querySelector('form');
+  reportForm.addEventListener('submit', function (e) {
+    const imageInput = reportForm.querySelector('input[type="file"]');
+    const hasImage = imageInput && imageInput.files && imageInput.files.length > 0;
+
+    if (!navigator.onLine && !hasImage) {
+      e.preventDefault();
+      const fields = {};
+      new FormData(reportForm).forEach((value, key) => {
+        if (key !== 'image') fields[key] = value;
+      });
+      queueReportOffline(fields);
+      alert('You are offline. This report has been saved on your device and will be submitted automatically once you have a connection.');
+      reportForm.reset();
+      window.location.href = "{{ url_for('worker.dashboard') }}";
+    }
+    // If online (or an image is attached), let the normal form POST happen.
+  });
+</script>
+<script>
+  // Browser-based voice-to-text (Web Speech API). Works in Chrome/Edge.
+  // No audio ever leaves the browser as a file — it's transcribed to text
+  // client-side and dropped straight into the textarea, which the worker
+  // can still review/edit before submitting.
+  const micBtn = document.getElementById('micBtn');
+  const micStatus = document.getElementById('micStatus');
+  const micLang = document.getElementById('micLang');
+  const description = document.getElementById('description');
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (!SpeechRecognition) {
+    micBtn.disabled = true;
+    micStatus.textContent = "Voice input isn't supported in this browser — please type your report.";
+  } else {
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+
+    let listening = false;
+
+    recognition.onresult = (event) => {
+      let finalTranscript = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript + ' ';
+        }
+      }
+      if (finalTranscript) {
+        description.value = (description.value + ' ' + finalTranscript).trim();
+      }
+    };
+
+    recognition.onend = () => {
+      listening = false;
+      micBtn.classList.remove('recording');
+      micBtn.textContent = 'Speak';
+      micStatus.textContent = '';
+    };
+
+    micBtn.addEventListener('click', () => {
+      if (!listening) {
+        recognition.lang = micLang.value; // regional language chosen by the worker
+        recognition.start();
+        listening = true;
+        micBtn.classList.add('recording');
+        micBtn.textContent = 'Stop';
+        micStatus.textContent = 'Listening... tap Stop when done.';
+      } else {
+        recognition.stop();
+      }
+    });
+  }
+</script>
+{% endblock %}

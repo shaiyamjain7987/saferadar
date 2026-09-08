@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% block title %}Site Dashboard{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-2">
+  <div>
+    <h3 class="mb-1">{{ site.name }} — Site Dashboard</h3>
+    <p class="text-muted mb-0">{{ current_user.name }}, Site Head</p>
+  </div>
+  <div>
+    <a href="{{ url_for('sitehead.report_new') }}" class="btn btn-primary btn-sm">+ New Report</a>
+    <a href="{{ url_for('sitehead.team') }}" class="btn btn-outline-primary btn-sm">+ Add Worker</a>
+    <a href="{{ url_for('sitehead.ranking') }}" class="btn btn-outline-primary btn-sm">Org-wide Ranking</a>
+    <a href="{{ url_for('sitehead.export_csv', **request.args) }}" class="btn btn-outline-secondary btn-sm">Export CSV</a>
+  </div>
+</div>
+
+<div class="row mb-4">
+  <div class="col-md-3">
+    <div class="card p-3 text-center">
+      <div class="fs-2 fw-bold">{{ workers|length }}</div>
+      <div class="text-muted">Workers at Site</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card p-3 text-center">
+      <div class="fs-2 fw-bold">{{ total_reports }}</div>
+      <div class="text-muted">Total Reports</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card p-3 text-center">
+      <div class="fs-2 fw-bold text-danger">{{ sif_count }}</div>
+      <div class="text-muted">SIF-Potential</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card p-3 text-center">
+      <div class="fs-5 fw-bold">{{ top_rule or '—' }}</div>
+      <div class="text-muted">Top Life-Saving Rule</div>
+    </div>
+  </div>
+</div>
+
+<div class="row mb-4">
+  <div class="col-md-7">
+    <div class="card p-3 h-100">
+      <h5 class="mb-3">Reports Over Time</h5>
+      <canvas id="trendChart" height="110"></canvas>
+    </div>
+  </div>
+  <div class="col-md-5">
+    <div class="card p-3 h-100">
+      <h5 class="mb-3">Top Life-Saving Rules</h5>
+      <canvas id="ruleChart" height="110"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-5 mb-4">
+    <div class="card p-3 h-100">
+      <h5 class="mb-3">Recurring Precursor Patterns</h5>
+      <p class="text-muted small">Area / Activity &times; Life-Saving Rule, among SIF-potential reports.</p>
+      {% if pattern_rows %}
+      <table class="table table-sm">
+        <thead><tr><th>Area / Activity</th><th>Life-Saving Rule</th><th>Count</th></tr></thead>
+        <tbody>
+          {% for area, rule, count in pattern_rows %}
+          <tr>
+            <td>{{ area }}</td>
+            <td>{{ rule or '—' }}</td>
+            <td><span class="badge bg-danger">{{ count }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+        <p class="text-muted mb-0">No SIF-potential reports yet at this site.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="col-md-7 mb-4">
+    <div class="card p-3 h-100">
+      <h5 class="mb-3">Workers at this Site</h5>
+      <table class="table table-sm align-middle">
+        <thead><tr><th>Name</th><th>Email</th><th>Reports</th><th>SIF-Potential</th></tr></thead>
+        <tbody>
+          {% for w in workers %}
+          <tr>
+            <td>{{ w.user.name }}</td>
+            <td>{{ w.user.email }}</td>
+            <td>{{ w.total }}</td>
+            <td>{% if w.sif_count %}<span class="badge bg-danger">{{ w.sif_count }}</span>{% else %}0{% endif %}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="text-muted">No workers signed up at this site yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="card p-3">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+    <h5 class="mb-0">All Reports at this Site</h5>
+  </div>
+
+  <form method="get" class="row g-2 mb-3">
+    <div class="col-md-3">
+      <select name="area" class="form-select form-select-sm">
+        <option value="">All Areas</option>
+        {% for a in areas %}
+          <option value="{{ a }}" {{ 'selected' if filters.get('area') == a }}>{{ a }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <select name="classification" class="form-select form-select-sm">
+        <option value="">All Classifications</option>
+        <option value="sif" {{ 'selected' if filters.get('classification') == 'sif' }}>SIF-Potential</option>
+        <option value="nonsif" {{ 'selected' if filters.get('classification') == 'nonsif' }}>Non-SIF</option>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <input type="date" name="date_from" class="form-control form-control-sm" value="{{ filters.get('date_from','') }}" placeholder="From">
+    </div>
+    <div class="col-md-2">
+      <input type="date" name="date_to" class="form-control form-control-sm" value="{{ filters.get('date_to','') }}" placeholder="To">
+    </div>
+    <div class="col-md-2">
+      <button type="submit" class="btn btn-primary btn-sm w-100">Filter</button>
+    </div>
+  </form>
+
+  {% if reports %}
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead>
+        <tr>
+          <th>Date</th><th>Worker</th><th>Area</th><th>Location</th><th>Classification</th><th>Rule</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in reports %}
+        <tr>
+          <td>{{ r.report_date.strftime('%d %b %Y') }}</td>
+          <td>{{ r.worker.name }}</td>
+          <td>{{ r.area }}</td>
+          <td>{{ r.location }}</td>
+          <td>
+            {% if r.sif_potential %}
+              <span class="badge badge-sif">SIF-Potential</span>
+            {% else %}
+              <span class="badge badge-nonsif">Non-SIF</span>
+            {% endif %}
+          </td>
+          <td>{{ r.life_saving_rule or '—' }}</td>
+          <td><a href="{{ url_for('sitehead.report_detail', report_id=r.id) }}" class="btn btn-sm btn-outline-secondary">View</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <p class="text-muted mb-0">No reports match these filters.</p>
+  {% endif %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+  const trendCtx = document.getElementById('trendChart');
+  new Chart(trendCtx, {
+    type: 'line',
+    data: {
+      labels: {{ trend_dates | tojson }},
+      datasets: [
+        {
+          label: 'Total Reports',
+          data: {{ trend_total | tojson }},
+          borderColor: '#0B2A4A',
+          backgroundColor: 'rgba(11,42,74,0.08)',
+          tension: 0.25,
+          fill: true,
+        },
+        {
+          label: 'SIF-Potential',
+          data: {{ trend_sif | tojson }},
+          borderColor: '#D9534F',
+          backgroundColor: 'rgba(217,83,79,0.12)',
+          tension: 0.25,
+          fill: true,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'bottom' } },
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+    }
+  });
+
+  const ruleCtx = document.getElementById('ruleChart');
+  new Chart(ruleCtx, {
+    type: 'bar',
+    data: {
+      labels: {{ rule_labels | tojson }},
+      datasets: [{
+        label: 'SIF-Potential Reports',
+        data: {{ rule_values | tojson }},
+        backgroundColor: '#FF6A2B',
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: { x: { beginAtZero: true, ticks: { precision: 0 } } }
+    }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends "auth/auth_base.html" %}
+{% block content %}
+<h4 class="fw-bold mb-4 text-center"><i class="bi bi-shield-fill-check"></i> Create Account</h4>
+<form method="POST">
+  <div class="mb-3"><label class="form-label">Full Name</label>
+    <input type="text" name="name" class="form-control" required></div>
+  <div class="mb-3"><label class="form-label">Email</label>
+    <input type="email" name="email" class="form-control" required></div>
+  <div class="mb-3"><label class="form-label">Password</label>
+    <input type="password" name="password" class="form-control" required minlength="6"></div>
+  <div class="mb-3"><label class="form-label">Role</label>
+    <select name="role" class="form-select" required>
+      <option value="worker">Worker</option>
+      <option value="site_head">Site Incharge</option>
+    </select></div>
+  <div class="mb-3"><label class="form-label">Site</label>
+    <select name="site_id" class="form-select" required>
+      <option value="" disabled selected>Select your site</option>
+      {% for s in sites %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+    </select></div>
+  <button type="submit" class="btn btn-gradient w-100 mt-2">Create Account</button>
+</form>
+<p class="text-center mt-3 mb-0">Already have an account? <a href="{{ url_for('auth.login') }}">Login</a></p>
+{% endblock %}

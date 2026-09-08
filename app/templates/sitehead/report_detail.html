@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Report #{{ report.id }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card p-4 mb-4">
+      <div class="d-flex justify-content-between align-items-start mb-3">
+        <h4 class="mb-0">Report #{{ report.id }}</h4>
+        {% if report.sif_potential %}
+          <span class="badge badge-sif fs-6">SIF-Potential</span>
+        {% else %}
+          <span class="badge badge-nonsif fs-6">Non-SIF</span>
+        {% endif %}
+      </div>
+
+      <dl class="row mb-0">
+        <dt class="col-sm-4">Date</dt>
+        <dd class="col-sm-8">{{ report.report_date.strftime('%d %b %Y') if report.report_date else '—' }}</dd>
+
+        <dt class="col-sm-4">Site</dt>
+        <dd class="col-sm-8">{{ report.site.name }}</dd>
+
+        <dt class="col-sm-4">Location</dt>
+        <dd class="col-sm-8">{{ report.location }}</dd>
+
+        <dt class="col-sm-4">Area / Activity</dt>
+        <dd class="col-sm-8">{{ report.area }}{% if report.activity %} / {{ report.activity }}{% endif %}</dd>
+
+        <dt class="col-sm-4">Reported by</dt>
+        <dd class="col-sm-8">{{ report.worker.name }}</dd>
+
+        <dt class="col-sm-4">Life-Saving Rule</dt>
+        <dd class="col-sm-8">{{ report.life_saving_rule or '—' }}</dd>
+
+        <dt class="col-sm-4">Precursor</dt>
+        <dd class="col-sm-8">{{ report.precursor or '—' }}</dd>
+
+        <dt class="col-sm-4">Hazard</dt>
+        <dd class="col-sm-8">{{ report.hazard or '—' }}</dd>
+
+        <dt class="col-sm-4">Barrier Failure</dt>
+        <dd class="col-sm-8">{{ report.barrier_failure or '—' }}</dd>
+
+        <dt class="col-sm-4">Risk</dt>
+        <dd class="col-sm-8">
+          {{ report.risk_level or '—' }}
+          {% if report.sif_score is not none %} (score {{ report.sif_score }}){% endif %}
+        </dd>
+
+        <dt class="col-sm-4">Status</dt>
+        <dd class="col-sm-8">{{ report.status or 'Open' }}</dd>
+      </dl>
+
+      <hr>
+      <h6>Description</h6>
+      <p>{{ report.description }}</p>
+
+      {% if report.explanation %}
+      <h6>Engine explanation</h6>
+      <p class="text-muted">{{ report.explanation }}</p>
+      {% endif %}
+
+      {% if report.image_filename %}
+        <img src="{{ url_for('static', filename='uploads/' + report.image_filename) }}"
+             class="img-fluid rounded mt-2" alt="Report photo">
+      {% endif %}
+    </div>
+
+    <div class="card p-4 mb-4">
+      <h5 class="mb-3">Update Status</h5>
+      <form method="post" class="row g-2 align-items-end">
+        <input type="hidden" name="action" value="update_status">
+        <div class="col-md-8">
+          <select name="status" class="form-select">
+            {% for s in ['Open', 'Under Investigation', 'Closed'] %}
+              <option value="{{ s }}" {{ 'selected' if report.status == s }}>{{ s }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-4">
+          <button class="btn btn-primary w-100" type="submit">Save</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card p-4 mb-4">
+      <h5 class="mb-3">Corrective Actions</h5>
+      {% if report.corrective_actions %}
+      <ul class="list-group mb-3">
+        {% for ca in report.corrective_actions %}
+        <li class="list-group-item">
+          <div class="d-flex justify-content-between">
+            <strong>{{ ca.priority }}</strong>
+            <span class="text-muted">{{ ca.status }}</span>
+          </div>
+          <div>{{ ca.description }}</div>
+          <small class="text-muted">
+            Assigned: {{ ca.assignee.name if ca.assignee else 'Unassigned' }}
+            {% if ca.due_date %} · Due {{ ca.due_date.strftime('%d %b %Y') }}{% endif %}
+          </small>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+        <p class="text-muted">No corrective actions yet.</p>
+      {% endif %}
+
+      <form method="post" class="row g-2">
+        <input type="hidden" name="action" value="add_corrective">
+        <div class="col-12">
+          <textarea name="description" class="form-control" rows="2" placeholder="Action to take..." required></textarea>
+        </div>
+        <div class="col-md-4">
+          <select name="priority" class="form-select">
+            <option>Low</option>
+            <option selected>Medium</option>
+            <option>High</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <select name="assigned_to" class="form-select">
+            <option value="">Unassigned</option>
+            {% for w in workers %}
+              <option value="{{ w.id }}">{{ w.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-4">
+          <input type="date" name="due_date" class="form-control">
+        </div>
+        <div class="col-12">
+          <button class="btn btn-outline-primary" type="submit">Add Corrective Action</button>
+        </div>
+      </form>
+    </div>
+
+    <a href="{{ url_for('sitehead.dashboard') }}" class="btn btn-outline-secondary">Back</a>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Org-Wide Ranking{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h3 class="mb-0">Org-Wide Site Ranking by SIF Density</h3>
+  <a href="{{ url_for('sitehead.dashboard') }}" class="btn btn-outline-secondary btn-sm">Back to Dashboard</a>
+</div>
+
+<div class="card p-3">
+  <p class="text-muted">Sites are ranked by the density of SIF-potential reports (SIF reports / Total reports).</p>
+  
+  <table class="table table-striped align-middle">
+    <thead>
+      <tr>
+        <th>Rank</th>
+        <th>Site</th>
+        <th>Total Reports</th>
+        <th>SIF-Potential</th>
+        <th>SIF Density (%)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for rank in rankings %}
+      <tr>
+        <td><strong>#{{ loop.index }}</strong></td>
+        <td>{{ rank.site.name }}</td>
+        <td>{{ rank.total }}</td>
+        <td>
+          {% if rank.sif > 0 %}
+            <span class="badge bg-danger">{{ rank.sif }}</span>
+          {% else %}
+            0
+          {% endif %}
+        </td>
+        <td>
+          {% if rank.density > 20 %}
+            <span class="text-danger fw-bold">{{ rank.density }}%</span>
+          {% else %}
+            {{ rank.density }}%
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="5" class="text-center text-muted">No sites available.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}My Dashboard{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="mb-0">Welcome, {{ current_user.name }}</h3>
+    <small class="text-muted">{{ current_user.email }} &middot; {{ current_user.site.name }}</small>
+  </div>
+  <a href="{{ url_for('worker.report_new') }}" class="btn btn-primary">+ New Report</a>
+</div>
+
+<div class="row mb-4">
+  <div class="col-md-4">
+    <div class="card p-3 text-center">
+      <div class="fs-2 fw-bold">{{ total_count }}</div>
+      <div class="text-muted">My Total Reports</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card p-3 text-center">
+      <div class="fs-2 fw-bold text-danger">{{ sif_count }}</div>
+      <div class="text-muted">Flagged SIF-Potential</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card p-3 text-center">
+      <div class="fs-2 fw-bold">{{ current_user.site.code }}</div>
+      <div class="text-muted">My Site</div>
+    </div>
+  </div>
+</div>
+
+<div class="card p-3">
+  <h5 class="mb-3">My Reports</h5>
+  {% if reports %}
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Area / Activity</th>
+          <th>Location</th>
+          <th>Classification</th>
+          <th>Life-Saving Rule</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in reports %}
+        <tr>
+          <td>{{ r.report_date.strftime('%d %b %Y') }}</td>
+          <td>{{ r.area }}</td>
+          <td>{{ r.location }}</td>
+          <td>
+            {% if r.sif_potential %}
+              <span class="badge badge-sif">SIF-Potential</span>
+            {% else %}
+              <span class="badge badge-nonsif">Non-SIF</span>
+            {% endif %}
+          </td>
+          <td>{{ r.life_saving_rule or '—' }}</td>
+          <td><a href="{{ url_for('worker.report_detail', report_id=r.id) }}" class="btn btn-sm btn-outline-secondary">View</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <p class="text-muted mb-0">You haven't filed any reports yet.</p>
+  {% endif %}
+</div>
+
+{% endblock %}

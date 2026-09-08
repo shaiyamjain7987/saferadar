@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Report #{{ report.id }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-7">
+    <div class="card p-4">
+      <div class="d-flex justify-content-between align-items-start mb-3">
+        <h4 class="mb-0">Report #{{ report.id }}</h4>
+        {% if report.sif_potential %}
+          <span class="badge badge-sif fs-6">SIF-Potential</span>
+        {% else %}
+          <span class="badge badge-nonsif fs-6">Non-SIF</span>
+        {% endif %}
+      </div>
+
+      <dl class="row">
+        <dt class="col-sm-4">Date</dt>
+        <dd class="col-sm-8">{{ report.report_date.strftime('%d %b %Y') if report.report_date else '—' }}</dd>
+
+        <dt class="col-sm-4">Site</dt>
+        <dd class="col-sm-8">{{ report.site.name }}</dd>
+
+        <dt class="col-sm-4">Location</dt>
+        <dd class="col-sm-8">{{ report.location }}</dd>
+
+        <dt class="col-sm-4">Area / Activity</dt>
+        <dd class="col-sm-8">{{ report.area }}{% if report.activity %} / {{ report.activity }}{% endif %}</dd>
+
+        <dt class="col-sm-4">Reported by</dt>
+        <dd class="col-sm-8">{{ report.worker.name }}</dd>
+
+        <dt class="col-sm-4">Life-Saving Rule</dt>
+        <dd class="col-sm-8">{{ report.life_saving_rule or '—' }}</dd>
+
+        <dt class="col-sm-4">Precursor</dt>
+        <dd class="col-sm-8">{{ report.precursor or '—' }}</dd>
+
+        <dt class="col-sm-4">Risk</dt>
+        <dd class="col-sm-8">{{ report.risk_level or '—' }}{% if report.sif_score is not none %} ({{ report.sif_score }}){% endif %}</dd>
+
+        <dt class="col-sm-4">Status</dt>
+        <dd class="col-sm-8">{{ report.status or 'Open' }}</dd>
+      </dl>
+
+      <hr>
+      <h6>Description</h6>
+      <p>{{ report.description }}</p>
+
+      {% if report.explanation %}
+      <h6>Why it was flagged</h6>
+      <p class="text-muted">{{ report.explanation }}</p>
+      {% endif %}
+
+      {% if report.image_filename %}
+        <img src="{{ url_for('static', filename='uploads/' + report.image_filename) }}"
+             class="img-fluid rounded mt-2" alt="Report photo">
+      {% endif %}
+
+      <a href="{{ url_for('worker.dashboard') }}" class="btn btn-outline-secondary mt-3">Back</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

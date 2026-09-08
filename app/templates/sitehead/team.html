@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}My Team{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+  <h3 class="mb-0">My Team</h3>
+  <a href="{{ url_for('sitehead.report_new') }}" class="btn btn-primary btn-sm">+ New Report</a>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-4">
+    <div class="card p-4">
+      <h5 class="mb-3">Add Worker</h5>
+      <p class="text-muted small">Create a login for a field worker at {{ current_user.site.name }}.</p>
+      <form method="post">
+        <div class="mb-3">
+          <label class="form-label">Full name</label>
+          <input type="text" name="name" class="form-control" required placeholder="e.g. Ramesh Kumar">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Email</label>
+          <input type="email" name="email" class="form-control" required placeholder="worker@oil.com">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Temporary password</label>
+          <input type="text" name="password" class="form-control" required minlength="6" placeholder="min 6 characters">
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Add Worker</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card p-3">
+      <h5 class="mb-3">Workers at this site</h5>
+      <table class="table align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Reports</th>
+            <th>SIF-Potential</th>
+            <th>Open Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for w in workers %}
+          <tr>
+            <td>{{ w.user.name }}</td>
+            <td>{{ w.user.email }}</td>
+            <td>{{ w.total }}</td>
+            <td>{% if w.sif_count %}<span class="badge bg-danger">{{ w.sif_count }}</span>{% else %}0{% endif %}</td>
+            <td>{{ w.open_actions }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="text-muted">No workers yet — use the form to add one.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

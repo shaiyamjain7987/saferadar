@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}New Report{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <div class="card p-4">
+      <h3 class="mb-3">File a Safety Report</h3>
+      <p class="text-muted">Record an Unsafe Act, Unsafe Condition, or Near-Miss for this site.</p>
+
+      <form method="post" enctype="multipart/form-data">
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Date of observation</label>
+            <input type="date" name="report_date" class="form-control" required>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Area / Activity</label>
+            <select name="area" class="form-select" required>
+              <option value="" disabled selected>Choose area/activity</option>
+              {% for area in areas %}
+                <option value="{{ area }}">{{ area }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Reported by (worker)</label>
+          <select name="worker_id" class="form-select">
+            <option value="{{ current_user.id }}">{{ current_user.name }} (Site Incharge)</option>
+            {% for w in workers %}
+              <option value="{{ w.id }}">{{ w.name }} ({{ w.email }})</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Location</label>
+          <input type="text" name="location" class="form-control" placeholder="e.g. Near Tank 4, Unit 2" required>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">What was observed?</label>
+          <textarea name="description" rows="5" class="form-control"
+                    placeholder="Describe the unsafe act / condition / near-miss..." required></textarea>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Attach a photo (optional)</label>
+          <input type="file" name="image" accept="image/png, image/jpeg" class="form-control">
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100">Submit Report</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
