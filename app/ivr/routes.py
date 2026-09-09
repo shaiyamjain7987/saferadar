@@ -100,7 +100,7 @@ def exotel_recording():
             "  <Hangup/>"
         )
 
-    uploads = os.path.join("uploads", "exotel")
+    uploads = os.path.join(current_app.config.get("UPLOAD_FOLDER", "uploads"), "exotel")
     os.makedirs(uploads, exist_ok=True)
     filename = f"{call_sid}.mp3"
     dest = os.path.join(uploads, filename)

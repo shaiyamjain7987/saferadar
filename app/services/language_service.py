@@ -3,6 +3,7 @@ import re
 
 import requests
 from flask import current_app, has_app_context
+from openai import OpenAI
 
 # Lightweight script detection used before calling translation.
 LANGUAGE_SCRIPTS = (
@@ -30,6 +31,30 @@ PHRASE_MAP = {
     "पाइपलाइन के पास आग लग गई": "Fire broke out near pipeline",
     "पाइपलाइन में आग लगी": "Fire broke out near pipeline",
     "आग लग गई": "Fire broke out",
+    "মেশিনের পাওয়ার বন্ধ ছিল না": "Machine power was not switched off",
+    "লকআউট করা হয়নি": "Lockout was not done",
+    "গ্যাস পরীক্ষা করা হয়নি": "Gas test was not performed",
+    "পারমিট ছিল না": "Permit was missing",
+    "উচ্চতায় কাজ": "Working at height",
+    "হারনেস পরা হয়নি": "Harness was not worn",
+    "இயந்திரத்தின் மின்சாரம் நிறுத்தப்படவில்லை": "Machine power was not switched off",
+    "லாக்அவுட் செய்யப்படவில்லை": "Lockout was not done",
+    "எரிவாயு சோதனை செய்யப்படவில்லை": "Gas test was not performed",
+    "அனுமதி இல்லை": "Permit was missing",
+    "உயரத்தில் வேலை": "Working at height",
+    "சேணம் அணியவில்லை": "Harness was not worn",
+    "యంత్రం పవర్ ఆఫ్ చేయలేదు": "Machine power was not switched off",
+    "లాక్‌అవుట్ చేయలేదు": "Lockout was not done",
+    "గ్యాస్ పరీక్ష చేయలేదు": "Gas test was not performed",
+    "పర్మిట్ లేదు": "Permit was missing",
+    "ఎత్తులో పని": "Working at height",
+    "హార్నెస్ ధరించలేదు": "Harness was not worn",
+    "ಮೆಷಿನ್ ಪವರ್ ಆಫ್ ಮಾಡಿರಲಿಲ್ಲ": "Machine power was not switched off",
+    "ಲಾಕೌಟ್ ಮಾಡಿರಲಿಲ್ಲ": "Lockout was not done",
+    "ಗ್ಯಾಸ್ ಟೆಸ್ಟ್ ಮಾಡಿರಲಿಲ್ಲ": "Gas test was not performed",
+    "ಪರ್ಮಿಟ್ ಇರಲಿಲ್ಲ": "Permit was missing",
+    "ಎತ್ತರದಲ್ಲಿ ಕೆಲಸ": "Working at height",
+    "হার্নেস পরা হয়নি": "Harness was not worn",
 }
 
 
@@ -69,7 +94,12 @@ def _bhashini_translate(text, source_lang):
 
         resp = requests.post(
             endpoint,
-            headers={"Authorization": api_key, "Content-Type": "application/json"},
+            headers={
+                "Authorization": api_key,
+                "userID": os.environ.get("BHASHINI_USER_ID", ""),
+                "ulcaApiKey": api_key,
+                "Content-Type": "application/json",
+            },
             json={
                 "pipelineTasks": [
                     {
@@ -109,21 +139,60 @@ def _translation_from_response(value):
     return None
 
 
+def _openai_translate(text, source_lang):
+    api_key = None
+    if has_app_context():
+        api_key = current_app.config.get("OPENAI_API_KEY")
+    api_key = api_key or os.environ.get("OPENAI_API_KEY")
+    if not api_key or source_lang == "en":
+        return None
+
+    try:
+        response = OpenAI(api_key=api_key).chat.completions.create(
+            model=os.environ.get("OPENAI_TRANSLATION_MODEL", "gpt-4o-mini"),
+            temperature=0,
+            messages=[
+                {
+                    "role": "system",
+                    "content": "Translate the user's safety report to concise English. Return only the translation.",
+                },
+                {"role": "user", "content": text},
+            ],
+        )
+        translated = response.choices[0].message.content
+        return translated.strip() if translated else None
+    except Exception as exc:
+        if has_app_context():
+            current_app.logger.warning("OpenAI translation failed: %s", exc)
+        return None
+
+
 def translate_to_english(text, source_lang):
     if not text:
         return text
     if source_lang in (None, "", "en"):
         return text
 
-    # 1) Offline phrase map
-    for hi, en in PHRASE_MAP.items():
-        if hi in text:
-            return text.replace(hi, en)
+    # 1) Offline phrase map. Replace matching phrases while preserving any
+    # surrounding location or activity details in the report.
+    translated_text = text
+    matched_phrase = False
+    for phrase, english in sorted(PHRASE_MAP.items(), key=lambda item: len(item[0]), reverse=True):
+        if phrase in translated_text:
+            translated_text = translated_text.replace(phrase, english)
+            matched_phrase = True
+    if matched_phrase:
+        return translated_text
 
     # 2) Bhashini if configured
     translated = _bhashini_translate(text, source_lang)
     if translated:
         return translated
 
-    # 3) Keep original — keyword NLP still works on mixed English terms
+    # 3) OpenAI fallback when Bhashini is unavailable.
+    translated = _openai_translate(text, source_lang)
+    if translated:
+        return translated
+
+    # 4) Keep original rather than dropping the worker's report.
     return text

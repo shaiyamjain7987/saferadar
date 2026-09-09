@@ -16,10 +16,11 @@ from ..services.report_pipeline import (
 
 
 def _analyze_audio_file(audio_file):
-    os.makedirs("uploads", exist_ok=True)
+    upload_dir = current_app.config.get("UPLOAD_FOLDER", "uploads")
+    os.makedirs(upload_dir, exist_ok=True)
     filename = audio_file.filename or "recording.webm"
     safe_name = f"{datetime.utcnow().strftime('%Y%m%d%H%M%S')}_{filename}"
-    file_path = os.path.join("uploads", safe_name)
+    file_path = os.path.join(upload_dir, safe_name)
     audio_file.save(file_path)
     payload = build_payload_from_audio(file_path, filename=safe_name)
     payload["file_path"] = file_path
