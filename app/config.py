@@ -7,6 +7,7 @@ load_dotenv()
 class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'default-dev-secret-key')
     IS_VERCEL = os.getenv('VERCEL') == '1'
+    SEED_DEMO_DATA = os.getenv('SEED_DEMO_DATA', '1' if IS_VERCEL else '0') == '1'
 
     # Database — default to project instance/site.db
     basedir = os.path.abspath(os.path.dirname(__file__))
@@ -14,6 +15,7 @@ class Config:
     if not IS_VERCEL:
         os.makedirs(_instance_dir, exist_ok=True)
     _default_db_dir = '/tmp' if IS_VERCEL else _instance_dir
+    os.makedirs(_default_db_dir, exist_ok=True)
     _default_db = Path(_default_db_dir, 'site.db').resolve().as_posix()
     _database_url = os.getenv('DATABASE_URL', f"sqlite:///{_default_db}")
     if _database_url.startswith('postgres://'):
