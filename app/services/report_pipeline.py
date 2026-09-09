@@ -1,6 +1,6 @@
 """Shared analyze → score → save report pipeline used by web, API, and IVR."""
 
-from datetime import date
+from datetime import datetime
 
 from ..extensions import db
 from ..models import Alert, AudioRecord, Report
@@ -65,7 +65,7 @@ def create_report_from_analysis(worker, payload, save_audio=True):
     report = Report(
         worker_id=worker.id,
         site_id=worker.site_id,
-        report_date=date.today(),
+        report_date=datetime.now().date(),
         location=payload.get("location") or "IVR / Voice Report",
         area=payload.get("area") or "Maintenance Area",
         description=payload.get("translated_text") or payload.get("transcript") or "",
@@ -81,6 +81,7 @@ def create_report_from_analysis(worker, payload, save_audio=True):
         risk_level=risk.get("risk_level"),
         explanation=risk.get("explanation"),
         status="Open",
+        created_at=datetime.now(),
     )
     db.session.add(report)
     db.session.flush()

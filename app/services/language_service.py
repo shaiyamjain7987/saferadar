@@ -4,9 +4,19 @@ import re
 import requests
 from flask import current_app, has_app_context
 
-# Lightweight language heuristics for demo (no external API required).
-DEVANAGARI_RE = re.compile(r"[\u0900-\u097F]")
-ASSAMESE_BENGALI_RE = re.compile(r"[\u0980-\u09FF]")
+# Lightweight script detection used before calling translation.
+LANGUAGE_SCRIPTS = (
+    ("hi", re.compile(r"[\u0900-\u097F]")),
+    ("bn", re.compile(r"[\u0980-\u09FF]")),
+    ("gu", re.compile(r"[\u0A80-\u0AFF]")),
+    ("pa", re.compile(r"[\u0A00-\u0A7F]")),
+    ("ta", re.compile(r"[\u0B80-\u0BFF]")),
+    ("te", re.compile(r"[\u0C00-\u0C7F]")),
+    ("kn", re.compile(r"[\u0C80-\u0CFF]")),
+    ("ml", re.compile(r"[\u0D00-\u0D7F]")),
+    ("or", re.compile(r"[\u0B00-\u0B7F]")),
+    ("ur", re.compile(r"[\u0600-\u06FF]")),
+)
 
 # Common safety phrases (Hindi -> English) for offline demo
 PHRASE_MAP = {
@@ -16,16 +26,19 @@ PHRASE_MAP = {
     "परमिट नहीं था": "Permit was missing",
     "ऊंचाई पर काम": "Working at height",
     "हार्नेस नहीं पहना": "Harness was not worn",
+    "पाइपलाइन में आग लग गई": "Fire broke out near pipeline",
+    "पाइपलाइन के पास आग लग गई": "Fire broke out near pipeline",
+    "पाइपलाइन में आग लगी": "Fire broke out near pipeline",
+    "आग लग गई": "Fire broke out",
 }
 
 
 def detect_language(text):
     if not text:
         return "en"
-    if DEVANAGARI_RE.search(text):
-        return "hi"
-    if ASSAMESE_BENGALI_RE.search(text):
-        return "as"
+    for language, script in LANGUAGE_SCRIPTS:
+        if script.search(text):
+            return language
     return "en"
 
 
@@ -43,7 +56,17 @@ def _bhashini_translate(text, source_lang):
         "BHASHINI_TRANSLATE_URL",
         "https://dhruva-api.bhashini.gov.in/services/inference/pipeline",
     )
+    service_id = os.environ.get("BHASHINI_TRANSLATE_SERVICE_ID")
     try:
+        translation_config = {
+            "language": {
+                "sourceLanguage": source_lang,
+                "targetLanguage": "en",
+            }
+        }
+        if service_id:
+            translation_config["serviceId"] = service_id
+
         resp = requests.post(
             endpoint,
             headers={"Authorization": api_key, "Content-Type": "application/json"},
@@ -51,42 +74,39 @@ def _bhashini_translate(text, source_lang):
                 "pipelineTasks": [
                     {
                         "taskType": "translation",
-                        "config": {
-                            "language": {
-                                "sourceLanguage": source_lang,
-                                "targetLanguage": "en",
-                            }
-                        },
+                        "config": translation_config,
                     }
                 ],
                 "inputData": {"input": [{"source": text}]},
             },
             timeout=20,
         )
-        if resp.status_code != 200:
-            return None
+        resp.raise_for_status()
         data = resp.json()
-        # Best-effort parse across common Bhashini response shapes
-        for key in ("pipelineResponse", "output", "data"):
-            block = data.get(key)
-            if isinstance(block, list) and block:
-                first = block[0]
-                if isinstance(first, dict):
-                    for out_key in ("output", "target", "tgt"):
-                        val = first.get(out_key)
-                        if isinstance(val, list) and val:
-                            item = val[0]
-                            if isinstance(item, dict) and item.get("target"):
-                                return item["target"]
-                            if isinstance(item, str):
-                                return item
-                        if isinstance(val, str):
-                            return val
-        return None
+        return _translation_from_response(data)
     except Exception as exc:
         if has_app_context():
             current_app.logger.warning("Bhashini translate failed: %s", exc)
         return None
+
+
+def _translation_from_response(value):
+    """Extract translated text from the supported Bhashini response shapes."""
+    if isinstance(value, dict):
+        for key in ("target", "tgt", "translatedText", "translation", "text"):
+            result = value.get(key)
+            if isinstance(result, str) and result.strip():
+                return result.strip()
+        for child in value.values():
+            result = _translation_from_response(child)
+            if result:
+                return result
+    elif isinstance(value, list):
+        for child in value:
+            result = _translation_from_response(child)
+            if result:
+                return result
+    return None
 
 
 def translate_to_english(text, source_lang):

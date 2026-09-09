@@ -120,7 +120,12 @@ def exotel_recording():
     payload["location"] = f"IVR call from {caller}"
     payload["area"] = "Maintenance Area"
 
-    worker = User.query.filter_by(email="worker1@oil.com").first()
+    worker_email = current_app.config.get("IVR_WORKER_EMAIL") or os.environ.get(
+        "IVR_WORKER_EMAIL", "worker1@oil.com"
+    )
+    worker = User.query.filter_by(email=worker_email).first()
+    if not worker:
+        worker = User.query.filter_by(role="worker").order_by(User.id.asc()).first()
     report = None
     if worker:
         try:

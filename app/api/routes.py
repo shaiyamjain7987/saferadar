@@ -136,10 +136,14 @@ def submit_report():
 
     analysis = data.get("analysis") or {}
     risk = data.get("risk") or {}
+    translated_description = data.get("description") or ""
+    detected_language = data.get("language") or "en"
     if not analysis and data.get("description"):
         payload = build_payload_from_text(data["description"])
         analysis = payload["analysis"]
         risk = payload["risk"]
+        translated_description = payload["translated_text"]
+        detected_language = payload["language"]
 
     report = Report(
         worker_id=current_user.id,
@@ -147,8 +151,8 @@ def submit_report():
         report_date=report_date,
         location=data.get("location") or "Unspecified",
         area=data.get("area") or "Other",
-        description=data.get("description") or "",
-        original_language=data.get("language", "en"),
+        description=translated_description,
+        original_language=detected_language,
         activity=analysis.get("activity"),
         hazard=analysis.get("hazard"),
         precursor=analysis.get("precursor"),

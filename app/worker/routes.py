@@ -52,7 +52,7 @@ def _build_report_from_form():
         report_date=report_date,
         location=location,
         area=area,
-        description=description,
+        description=english_text,
         original_language=lang,
         image_filename=image_filename,
         activity=analysis.get("activity"),
