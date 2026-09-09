@@ -12,3 +12,4 @@ pandas==2.2.2
 SpeechRecognition==3.10.3
 soundfile==0.12.1
 Requests==2.31.0
+psycopg[binary]==3.2.9

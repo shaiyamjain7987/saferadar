@@ -6,13 +6,19 @@ load_dotenv()
 
 class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'default-dev-secret-key')
+    IS_VERCEL = os.getenv('VERCEL') == '1'
 
     # Database — default to project instance/site.db
     basedir = os.path.abspath(os.path.dirname(__file__))
     _instance_dir = os.path.join(basedir, '..', 'instance')
-    os.makedirs(_instance_dir, exist_ok=True)
-    _default_db = Path(_instance_dir, 'site.db').resolve().as_posix()
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', f"sqlite:///{_default_db}")
+    if not IS_VERCEL:
+        os.makedirs(_instance_dir, exist_ok=True)
+    _default_db_dir = '/tmp' if IS_VERCEL else _instance_dir
+    _default_db = Path(_default_db_dir, 'site.db').resolve().as_posix()
+    _database_url = os.getenv('DATABASE_URL', f"sqlite:///{_default_db}")
+    if _database_url.startswith('postgres://'):
+        _database_url = _database_url.replace('postgres://', 'postgresql+psycopg://', 1)
+    SQLALCHEMY_DATABASE_URI = _database_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # ML Models
@@ -41,3 +47,7 @@ class Config:
 
     # Uploads
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
+    UPLOAD_FOLDER = os.getenv(
+        'UPLOAD_FOLDER',
+        '/tmp/saferadar-uploads' if IS_VERCEL else os.path.join(basedir, 'static', 'uploads'),
+    )

@@ -25,7 +25,7 @@ def _require_site_head():
 def _save_image(file_storage):
     if not file_storage or not file_storage.filename:
         return None
-    upload_dir = os.path.join(current_app.root_path, "static", "uploads")
+    upload_dir = current_app.config["UPLOAD_FOLDER"]
     os.makedirs(upload_dir, exist_ok=True)
     ext = os.path.splitext(secure_filename(file_storage.filename))[1].lower() or ".jpg"
     filename = f"{uuid.uuid4().hex}{ext}"
