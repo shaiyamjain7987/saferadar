@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import requests
 from openai import OpenAI
 from flask import current_app
 
@@ -67,6 +68,44 @@ def _semantic_analysis(text, client):
         return None
     return result
 
+
+def _gemini_semantic_analysis(text, api_key):
+    rules = list(rule_descriptions)
+    prompt = (
+        "You are an oil and gas safety NLP analyst. Analyze this report semantically, "
+        "not by exact keyword matching. Map it to exactly one life-saving rule from "
+        f"{rules}. Return JSON only with keys: activity, hazard, unsafe_condition, "
+        "precursor, barrier_failure, life_saving_rule, sif_potential. Set sif_potential "
+        "true when the situation could cause serious injury or fatality.\n\nReport: "
+        + text
+    )
+    model = os.environ.get("GEMINI_NLP_MODEL", "gemini-2.0-flash")
+    response = requests.post(
+        f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+        params={"key": api_key},
+        json={
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {
+                "temperature": 0,
+                "responseMimeType": "application/json",
+            },
+        },
+        timeout=20,
+    )
+    response.raise_for_status()
+    data = response.json()
+    parts = data.get("candidates", [{}])[0].get("content", {}).get("parts", [])
+    content = next((part.get("text") for part in parts if part.get("text")), "{}")
+    result = json.loads(content)
+    if result.get("life_saving_rule") not in rules:
+        result["life_saving_rule"] = "General Safety"
+    result["unsafe_condition"] = text
+    result["sif_potential"] = bool(result.get("sif_potential"))
+    required = ("activity", "hazard", "precursor", "barrier_failure")
+    if not all(isinstance(result.get(key), str) and result[key].strip() for key in required):
+        return None
+    return result
+
 def get_openai_embedding(text, client):
     response = client.embeddings.create(input=text, model="text-embedding-3-small")
     return response.data[0].embedding
@@ -89,6 +128,7 @@ def analyze_safety_text(text):
     matched_rule = "General Safety"
     
     api_key = current_app.config.get('OPENAI_API_KEY') or os.environ.get('OPENAI_API_KEY')
+    gemini_key = current_app.config.get('GEMINI_API_KEY') or os.environ.get('GEMINI_API_KEY')
     
     if api_key:
         try:
@@ -98,6 +138,14 @@ def analyze_safety_text(text):
                 return semantic_result
         except Exception as e:
             print(f"OpenAI semantic NLP failed: {e}")
+
+    if gemini_key:
+        try:
+            semantic_result = _gemini_semantic_analysis(text, gemini_key)
+            if semantic_result:
+                return semantic_result
+        except Exception as e:
+            print(f"Gemini semantic NLP failed: {e}")
 
         try:
             client = OpenAI(api_key=api_key)

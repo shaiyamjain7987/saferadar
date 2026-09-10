@@ -29,6 +29,7 @@ class Config:
 
     # External APIs
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+    GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
     BHASHINI_API_KEY = os.getenv('BHASHINI_API_KEY') or os.getenv('UDYAT_API_KEY')
     BHASHINI_INFERENCE_KEY = (
         os.getenv('BHASHINI_INFERENCE_KEY')
