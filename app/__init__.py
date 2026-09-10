@@ -6,27 +6,31 @@ from .models import Site, User
 
 def _initialize_database(app):
     with app.app_context():
-        db.create_all()
-        if not app.config["SEED_DEMO_DATA"]:
-            return
+        try:
+            db.create_all()
+            if not app.config["SEED_DEMO_DATA"]:
+                return
 
-        site = Site.query.filter_by(code="SITE-A").first()
-        if site is None:
-            site = Site(name="Site A - Duliajan", code="SITE-A")
-            db.session.add(site)
-            db.session.flush()
+            site = Site.query.filter_by(code="SITE-A").first()
+            if site is None:
+                site = Site(name="Site A - Duliajan", code="SITE-A")
+                db.session.add(site)
+                db.session.flush()
 
-        demo_users = (
-            ("Admin", "admin@oil.com", "site_head"),
-            ("Worker One", "worker1@oil.com", "worker"),
-        )
-        for name, email, role in demo_users:
-            if User.query.filter_by(email=email).first() is None:
-                user = User(name=name, email=email, role=role, site_id=site.id)
-                user.set_password("password")
-                db.session.add(user)
+            demo_users = (
+                ("Admin", "admin@oil.com", "site_head"),
+                ("Worker One", "worker1@oil.com", "worker"),
+            )
+            for name, email, role in demo_users:
+                if User.query.filter_by(email=email).first() is None:
+                    user = User(name=name, email=email, role=role, site_id=site.id)
+                    user.set_password("password")
+                    db.session.add(user)
 
-        db.session.commit()
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Database initialization failed")
 
 def create_app(config_class=Config):
     app = Flask(__name__)
