@@ -18,8 +18,9 @@ class Config:
     os.makedirs(_default_db_dir, exist_ok=True)
     _default_db = Path(_default_db_dir, 'site.db').resolve().as_posix()
     _database_url = os.getenv('DATABASE_URL', f"sqlite:///{_default_db}")
-    if _database_url.startswith('postgres://'):
+    if _database_url.startswith(('postgres://', 'postgresql://')):
         _database_url = _database_url.replace('postgres://', 'postgresql+psycopg://', 1)
+        _database_url = _database_url.replace('postgresql://', 'postgresql+psycopg://', 1)
     SQLALCHEMY_DATABASE_URI = _database_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
