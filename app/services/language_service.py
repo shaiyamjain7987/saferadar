@@ -100,6 +100,11 @@ def _bhashini_translate(text, source_lang):
     )
     service_id = os.environ.get("BHASHINI_TRANSLATE_SERVICE_ID")
     try:
+        inference_key = (
+            current_app.config.get("BHASHINI_INFERENCE_KEY")
+            if has_app_context()
+            else None
+        ) or api_key
         translation_config = {
             "language": {
                 "sourceLanguage": source_lang,
@@ -112,7 +117,7 @@ def _bhashini_translate(text, source_lang):
         resp = requests.post(
             endpoint,
             headers={
-                "Authorization": api_key,
+                "Authorization": inference_key,
                 "userID": os.environ.get("BHASHINI_USER_ID", ""),
                 "ulcaApiKey": api_key,
                 "Content-Type": "application/json",

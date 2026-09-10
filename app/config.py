@@ -29,7 +29,12 @@ class Config:
 
     # External APIs
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-    BHASHINI_API_KEY = os.getenv('BHASHINI_API_KEY')
+    BHASHINI_API_KEY = os.getenv('BHASHINI_API_KEY') or os.getenv('UDYAT_API_KEY')
+    BHASHINI_INFERENCE_KEY = (
+        os.getenv('BHASHINI_INFERENCE_KEY')
+        or os.getenv('UDYAT_INFERENCE_KEY')
+        or BHASHINI_API_KEY
+    )
     BHASHINI_ASR_LANGUAGE = os.getenv('BHASHINI_ASR_LANGUAGE', 'auto')
     BHASHINI_ASR_SERVICE_ID = os.getenv('BHASHINI_ASR_SERVICE_ID')
     BHASHINI_TRANSLATE_SERVICE_ID = os.getenv('BHASHINI_TRANSLATE_SERVICE_ID')

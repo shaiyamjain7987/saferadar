@@ -16,9 +16,14 @@ def _audio_content(file_path):
 
 
 def _bhashini_detect_language(endpoint, api_key, audio_content):
+    inference_key = current_app.config.get("BHASHINI_INFERENCE_KEY") or api_key
     response = requests.post(
         endpoint,
-        headers={"Authorization": api_key, "Content-Type": "application/json"},
+        headers={
+            "Authorization": inference_key,
+            "ulcaApiKey": api_key,
+            "Content-Type": "application/json",
+        },
         json={
             "pipelineTasks": [{"taskType": "language-detection", "config": {}}],
             "inputData": {"audio": [{"audioContent": audio_content}]},
@@ -57,7 +62,11 @@ def _bhashini_transcribe(file_path, api_key):
 
     response = requests.post(
         endpoint,
-        headers={"Authorization": api_key, "Content-Type": "application/json"},
+        headers={
+            "Authorization": current_app.config.get("BHASHINI_INFERENCE_KEY") or api_key,
+            "ulcaApiKey": api_key,
+            "Content-Type": "application/json",
+        },
         json={
             "pipelineTasks": [{"taskType": "asr", "config": asr_config}],
             "inputData": {"audio": [{"audioContent": audio_content}]},
