@@ -7,7 +7,6 @@ from openai import OpenAI
 
 # Lightweight script detection used before calling translation.
 LANGUAGE_SCRIPTS = (
-    ("as", re.compile(r"[\u0980-\u09FF]")),
     ("hi", re.compile(r"[\u0900-\u097F]")),
     ("bn", re.compile(r"[\u0980-\u09FF]")),
     ("gu", re.compile(r"[\u0A80-\u0AFF]")),
