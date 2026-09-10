@@ -33,9 +33,16 @@ def health():
     openai_key = bool(current_app.config.get("OPENAI_API_KEY"))
     bhashini = bool(current_app.config.get("BHASHINI_API_KEY"))
     exotel = exotel_status()
+    database = {"ok": True}
+    try:
+        db.session.execute(db.text("SELECT 1"))
+    except Exception as exc:
+        db.session.rollback()
+        database = {"ok": False, "error": type(exc).__name__}
     return jsonify(
         {
             "ok": True,
+            "database": database,
             "openai": {
                 "configured": openai_key,
                 "note": "Needs billing credits for live Whisper/embeddings; falls back otherwise",
