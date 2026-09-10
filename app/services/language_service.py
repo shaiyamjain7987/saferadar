@@ -7,6 +7,7 @@ from openai import OpenAI
 
 # Lightweight script detection used before calling translation.
 LANGUAGE_SCRIPTS = (
+    ("as", re.compile(r"[\u0980-\u09FF]")),
     ("hi", re.compile(r"[\u0900-\u097F]")),
     ("bn", re.compile(r"[\u0980-\u09FF]")),
     ("gu", re.compile(r"[\u0A80-\u0AFF]")),
@@ -18,6 +19,10 @@ LANGUAGE_SCRIPTS = (
     ("or", re.compile(r"[\u0B00-\u0B7F]")),
     ("ur", re.compile(r"[\u0600-\u06FF]")),
 )
+
+SUPPORTED_LANGUAGE_CODES = {
+    "en", "hi", "bn", "as", "gu", "pa", "mr", "ta", "te", "kn", "ml", "or", "ur"
+}
 
 # Common safety phrases (Hindi -> English) for offline demo
 PHRASE_MAP = {
@@ -58,7 +63,12 @@ PHRASE_MAP = {
 }
 
 
-def detect_language(text):
+def detect_language(text, language_hint=None):
+    hint = (language_hint or "").strip().lower().replace("_", "-")
+    if hint and hint != "auto":
+        hint = hint.split("-")[0]
+        if hint in SUPPORTED_LANGUAGE_CODES:
+            return hint
     if not text:
         return "en"
     for language, script in LANGUAGE_SCRIPTS:

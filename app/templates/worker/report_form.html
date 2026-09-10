@@ -33,8 +33,9 @@
           <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
             <label class="form-label mb-0">What did you observe?</label>
             <div class="d-flex gap-2 align-items-center">
-              <select id="micLang" class="form-select form-select-sm" style="width: auto;">
-                <option value="en-IN">🎙️ English</option>
+              <select id="micLang" name="language" class="form-select form-select-sm" style="width: auto;">
+                <option value="auto" selected>Auto detect</option>
+                <option value="en-IN">English</option>
                 <option value="hi-IN">🎙️ हिंदी (Hindi)</option>
                 <option value="bn-IN">🎙️ বাংলা (Bengali)</option>
                 <option value="ta-IN">🎙️ தமிழ் (Tamil)</option>
@@ -134,7 +135,7 @@
 
     micBtn.addEventListener('click', () => {
       if (!listening) {
-        recognition.lang = micLang.value; // regional language chosen by the worker
+        recognition.lang = micLang.value === 'auto' ? 'en-IN' : micLang.value;
         recognition.start();
         listening = true;
         micBtn.classList.add('recording');

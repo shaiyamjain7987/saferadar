@@ -54,3 +54,4 @@ class Config:
         'UPLOAD_FOLDER',
         '/tmp/saferadar-uploads' if IS_VERCEL else os.path.join(basedir, 'static', 'uploads'),
     )
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)

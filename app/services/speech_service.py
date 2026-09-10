@@ -71,20 +71,20 @@ def _bhashini_transcribe(file_path, api_key):
         for output in task.get("output", []):
             text = output.get("source") or output.get("text")
             if text:
-                return text.strip()
-    return ""
+                return text.strip(), source_language
+    return "", source_language
 
 
-def transcribe_audio(file_path):
+def transcribe_audio_with_language(file_path):
     """Transcribe with Bhashini, then OpenAI, SpeechRecognition, and demo text."""
     bhashini_key = current_app.config.get("BHASHINI_API_KEY") or os.environ.get(
         "BHASHINI_API_KEY"
     )
     if bhashini_key:
         try:
-            text = _bhashini_transcribe(file_path, bhashini_key)
+            text, language = _bhashini_transcribe(file_path, bhashini_key)
             if text:
-                return text
+                return text, language
         except Exception as e:
             current_app.logger.warning("Bhashini ASR failed: %s", e)
 
@@ -97,10 +97,11 @@ def transcribe_audio(file_path):
                 transcription = client.audio.transcriptions.create(
                     model="whisper-1",
                     file=audio_file,
+                    response_format="verbose_json",
                 )
             text = (transcription.text or "").strip()
             if text:
-                return text
+                return text, getattr(transcription, "language", None)
         except Exception as e:
             current_app.logger.warning("OpenAI Whisper failed: %s", e)
 
@@ -113,9 +114,15 @@ def transcribe_audio(file_path):
             audio = recognizer.record(source)
         text = recognizer.recognize_google(audio)
         if text:
-            return text.strip()
+            return text.strip(), None
     except Exception as e:
         current_app.logger.warning("SpeechRecognition fallback failed: %s", e)
 
     current_app.logger.warning("Using demo transcript fallback for %s", file_path)
-    return "Machine power was not switched off during maintenance."
+    return "Machine power was not switched off during maintenance.", "en"
+
+
+def transcribe_audio(file_path):
+    """Backward-compatible text-only transcription helper."""
+    text, _language = transcribe_audio_with_language(file_path)
+    return text

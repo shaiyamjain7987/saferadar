@@ -6,12 +6,12 @@ from ..extensions import db
 from ..models import Alert, AudioRecord, Report
 
 
-def build_payload_from_text(text, language="en", translated_text=None, filename="text_report.txt"):
+def build_payload_from_text(text, language=None, translated_text=None, filename="text_report.txt"):
     from .language_service import detect_language, translate_to_english
     from .nlp_service import analyze_safety_text
     from .risk_service import calculate_sif_score
 
-    lang = language or detect_language(text)
+    lang = detect_language(text, language)
     english = translated_text if translated_text is not None else translate_to_english(text, lang)
     analysis = analyze_safety_text(english)
     risk = calculate_sif_score(analysis)
@@ -29,10 +29,10 @@ def build_payload_from_audio(file_path, filename=None):
     from .language_service import detect_language, translate_to_english
     from .nlp_service import analyze_safety_text
     from .risk_service import calculate_sif_score
-    from .speech_service import transcribe_audio
+    from .speech_service import transcribe_audio_with_language
 
-    transcript = transcribe_audio(file_path)
-    lang = detect_language(transcript)
+    transcript, audio_language = transcribe_audio_with_language(file_path)
+    lang = detect_language(transcript, audio_language)
     english = translate_to_english(transcript, lang)
     analysis = analyze_safety_text(english)
     risk = calculate_sif_score(analysis)

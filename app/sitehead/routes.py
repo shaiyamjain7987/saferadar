@@ -326,7 +326,7 @@ def report_new():
         if not reporter:
             reporter = current_user
 
-        lang = detect_language(description)
+        lang = detect_language(description, request.form.get("language"))
         english_text = translate_to_english(description, lang)
         analysis = analyze_safety_text(english_text)
         risk = calculate_sif_score(analysis)
