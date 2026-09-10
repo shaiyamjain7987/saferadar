@@ -1,5 +1,6 @@
 import os
 import re
+import json
 from openai import OpenAI
 from flask import current_app
 
@@ -33,6 +34,39 @@ rule_descriptions = {
 
 _rule_embs = None
 
+
+def _semantic_analysis(text, client):
+    rules = list(rule_descriptions)
+    response = client.chat.completions.create(
+        model=os.environ.get("OPENAI_NLP_MODEL", "gpt-4o-mini"),
+        temperature=0,
+        response_format={"type": "json_object"},
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "You are an oil and gas safety NLP analyst. Analyze the report semantically, "
+                    "not by exact keyword matching. Map it to exactly one life-saving rule from "
+                    f"{rules}. Return JSON only with keys: activity, hazard, unsafe_condition, "
+                    "precursor, barrier_failure, life_saving_rule, sif_potential. "
+                    "Set sif_potential true when the described situation could cause serious injury "
+                    "or fatality, even if the report does not use a standard keyword."
+                ),
+            },
+            {"role": "user", "content": text},
+        ],
+    )
+    content = response.choices[0].message.content or "{}"
+    result = json.loads(content)
+    if result.get("life_saving_rule") not in rules:
+        result["life_saving_rule"] = "General Safety"
+    result["unsafe_condition"] = text
+    result["sif_potential"] = bool(result.get("sif_potential"))
+    required = ("activity", "hazard", "precursor", "barrier_failure")
+    if not all(isinstance(result.get(key), str) and result[key].strip() for key in required):
+        return None
+    return result
+
 def get_openai_embedding(text, client):
     response = client.embeddings.create(input=text, model="text-embedding-3-small")
     return response.data[0].embedding
@@ -59,6 +93,14 @@ def analyze_safety_text(text):
     if api_key:
         try:
             client = OpenAI(api_key=api_key)
+            semantic_result = _semantic_analysis(text, client)
+            if semantic_result:
+                return semantic_result
+        except Exception as e:
+            print(f"OpenAI semantic NLP failed: {e}")
+
+        try:
+            client = OpenAI(api_key=api_key)
             input_emb = get_openai_embedding(text, client)
             
             rules = list(rule_descriptions.keys())
@@ -75,7 +117,6 @@ def analyze_safety_text(text):
                 matched_rule = rules[best_idx]
         except Exception as e:
             print(f"OpenAI Embedding API failed: {e}")
-            api_key = None # Fallback to keyword matching
             
     if not api_key:
         # Fallback to strict keyword matching if ML fails or API key missing
