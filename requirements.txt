@@ -6,10 +6,6 @@ Flask-Migrate==4.0.5
 python-dotenv==1.0.1
 openai==1.14.0
 httpx==0.27.2
-scikit-learn==1.4.2
-numpy==1.26.4
-pandas==2.2.2
 SpeechRecognition==3.10.3
-soundfile==0.12.1
 Requests==2.31.0
 psycopg[binary]==3.2.9

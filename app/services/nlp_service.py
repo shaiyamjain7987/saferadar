@@ -1,6 +1,5 @@
 import os
 import re
-import numpy as np
 from openai import OpenAI
 from flask import current_app
 
@@ -36,10 +35,15 @@ _rule_embs = None
 
 def get_openai_embedding(text, client):
     response = client.embeddings.create(input=text, model="text-embedding-3-small")
-    return np.array(response.data[0].embedding)
+    return response.data[0].embedding
 
 def cosine_similarity(a, b):
-    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+    dot_product = sum(x * y for x, y in zip(a, b))
+    magnitude_a = sum(x * x for x in a) ** 0.5
+    magnitude_b = sum(y * y for y in b) ** 0.5
+    if not magnitude_a or not magnitude_b:
+        return 0.0
+    return dot_product / (magnitude_a * magnitude_b)
 
 def analyze_safety_text(text):
     global _rule_embs
@@ -65,7 +69,7 @@ def analyze_safety_text(text):
                 _rule_embs = [get_openai_embedding(desc, client) for desc in descriptions]
                 
             cos_scores = [cosine_similarity(input_emb, emb) for emb in _rule_embs]
-            best_idx = np.argmax(cos_scores)
+            best_idx = max(range(len(cos_scores)), key=cos_scores.__getitem__)
             
             if cos_scores[best_idx] > 0.4:  # Threshold for openai embeddings
                 matched_rule = rules[best_idx]
