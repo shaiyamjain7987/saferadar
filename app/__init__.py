@@ -1,4 +1,5 @@
 from flask import Flask
+from werkzeug.middleware.proxy_fix import ProxyFix
 from .config import Config
 from .extensions import db, login_manager, migrate
 from .models import Site, User
@@ -35,6 +36,7 @@ def _initialize_database(app):
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
     # Initialize extensions
     db.init_app(app)

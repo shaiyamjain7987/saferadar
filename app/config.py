@@ -6,7 +6,7 @@ load_dotenv()
 
 class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'default-dev-secret-key')
-    IS_VERCEL = os.getenv('VERCEL') == '1'
+    IS_VERCEL = os.getenv('VERCEL') == '1' or bool(os.getenv('VERCEL_ENV'))
     SEED_DEMO_DATA = os.getenv('SEED_DEMO_DATA', '1' if IS_VERCEL else '0') == '1'
 
     # Database — default to project instance/site.db
@@ -56,8 +56,9 @@ class Config:
 
     # Uploads
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
-    UPLOAD_FOLDER = os.getenv(
-        'UPLOAD_FOLDER',
-        '/tmp/saferadar-uploads' if IS_VERCEL else os.path.join(basedir, 'static', 'uploads'),
+    UPLOAD_FOLDER = (
+        '/tmp/saferadar-uploads'
+        if IS_VERCEL
+        else os.getenv('UPLOAD_FOLDER', os.path.join(basedir, 'static', 'uploads'))
     )
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)

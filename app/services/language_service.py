@@ -19,6 +19,8 @@ LANGUAGE_SCRIPTS = (
     ("ur", re.compile(r"[\u0600-\u06FF]")),
 )
 
+_COMMON_ASSAMESE_MARKERS = set("ৰৱ")
+
 SUPPORTED_LANGUAGE_CODES = {
     "en", "hi", "bn", "as", "gu", "pa", "mr", "ta", "te", "kn", "ml", "or", "ur"
 }
@@ -54,6 +56,13 @@ PHRASE_MAP = {
     "இயந்திரத்தின் மின்சாரம் நிறுத்தப்படவில்லை": "Machine power was not switched off",
     "லாக்அவுட் செய்யப்படவில்லை": "Lockout was not done",
     "எரிவாயு சோதனை செய்யப்படவில்லை": "Gas test was not performed",
+        "আগুন লেগেছে": "Fire broke out",
+        "আগুন লাগছে": "Fire broke out",
+        "আগুন লাগল": "Fire broke out",
+        "পাইপলাইনের কাছে আগুন লেগেছে": "Fire broke out near pipeline",
+        "পাইপলাইনের পাশে আগুন লেগেছে": "Fire broke out near pipeline",
+        "জুই লাগিছে": "Fire broke out",
+        "পাইপলাইনৰ ওচৰত জুই লাগিছে": "Fire broke out near pipeline",
     "அனுமதி இல்லை": "Permit was missing",
     "உயரத்தில் வேலை": "Working at height",
     "சேணம் அணியவில்லை": "Harness was not worn",
@@ -80,9 +89,15 @@ def detect_language(text, language_hint=None):
             return hint
     if not text:
         return "en"
-    for language, script in LANGUAGE_SCRIPTS:
-        if script.search(text):
-            return language
+    script_counts = [
+        (language, len(script.findall(text)))
+        for language, script in LANGUAGE_SCRIPTS
+    ]
+    matching_scripts = [(language, count) for language, count in script_counts if count]
+    if matching_scripts:
+        if any(character in _COMMON_ASSAMESE_MARKERS for character in text):
+            return "as"
+        return max(matching_scripts, key=lambda item: item[1])[0]
     return "en"
 
 
@@ -163,6 +178,10 @@ def _translation_from_response(value):
     return None
 
 
+def _normalise_for_phrase_matching(text):
+    return re.sub(r"\s+", " ", text.strip())
+
+
 def _openai_translate(text, source_lang):
     api_key = None
     if has_app_context():
@@ -199,11 +218,13 @@ def translate_to_english(text, source_lang):
 
     # 1) Offline phrase map. Replace matching phrases while preserving any
     # surrounding location or activity details in the report.
-    translated_text = text
+    normalised_text = _normalise_for_phrase_matching(text)
+    translated_text = normalised_text
     matched_phrase = False
     for phrase, english in sorted(PHRASE_MAP.items(), key=lambda item: len(item[0]), reverse=True):
-        if phrase in translated_text:
-            translated_text = translated_text.replace(phrase, english)
+        normalised_phrase = _normalise_for_phrase_matching(phrase)
+        if normalised_phrase in translated_text:
+            translated_text = translated_text.replace(normalised_phrase, english)
             matched_phrase = True
     if matched_phrase:
         return translated_text

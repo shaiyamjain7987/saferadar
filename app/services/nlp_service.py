@@ -147,6 +147,7 @@ def analyze_safety_text(text):
         except Exception as e:
             print(f"Gemini semantic NLP failed: {e}")
 
+    if api_key:
         try:
             client = OpenAI(api_key=api_key)
             input_emb = get_openai_embedding(text, client)
@@ -165,13 +166,11 @@ def analyze_safety_text(text):
                 matched_rule = rules[best_idx]
         except Exception as e:
             print(f"OpenAI Embedding API failed: {e}")
-            
-    if not api_key:
-        # Fallback to strict keyword matching if ML fails or API key missing
-        for rule, keywords in IOGP_RULES.items():
-            if any(kw in text_lower for kw in keywords):
-                matched_rule = rule
-                break
+
+    for rule, keywords in IOGP_RULES.items():
+        if any(keyword in text_lower for keyword in keywords):
+            matched_rule = rule
+            break
 
     # Determine Precursors and Hazards based on matched rule
     precursor = f"{matched_rule} Failure"
