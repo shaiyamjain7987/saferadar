@@ -26,19 +26,21 @@ def login():
             ), 503
 
         try:
+            if not current_app.extensions.get("database_ready", False):
+                raise RuntimeError("Database initialization did not complete")
+
             user = User.query.filter_by(email=email).first()
-        except SQLAlchemyError:
+            authenticated = user is not None and user.check_password(password)
+            if authenticated:
+                login_user(user)
+                if user.is_worker:
+                    return redirect(url_for("worker.dashboard"))
+                return redirect(url_for("sitehead.dashboard"))
+        except (SQLAlchemyError, RuntimeError, ValueError, TypeError):
             db.session.rollback()
-            current_app.logger.exception("Login database query failed")
+            current_app.logger.exception("Login authentication failed")
             flash("Login is temporarily unavailable. Check the database configuration.", "danger")
             return render_template("auth/login.html"), 503
-
-        if user and user.check_password(password):
-            login_user(user)
-            if user.is_worker:
-                return redirect(url_for("worker.dashboard"))
-            else:
-                return redirect(url_for("sitehead.dashboard"))
 
         flash("Invalid email or password.", "danger")
 
