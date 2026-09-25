@@ -5,8 +5,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Config:
-    SECRET_KEY = os.getenv('SECRET_KEY', 'default-dev-secret-key')
     IS_VERCEL = os.getenv('VERCEL') == '1' or bool(os.getenv('VERCEL_ENV'))
+    SECRET_KEY = os.getenv('SECRET_KEY') or (
+        None if IS_VERCEL else 'default-dev-secret-key'
+    )
     SEED_DEMO_DATA = os.getenv('SEED_DEMO_DATA', '1' if IS_VERCEL else '0') == '1'
 
     # Database — default to project instance/site.db

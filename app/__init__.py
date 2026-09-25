@@ -6,10 +6,12 @@ from .models import Site, User
 
 
 def _initialize_database(app):
+    app.extensions["database_ready"] = False
     with app.app_context():
         try:
             db.create_all()
             if not app.config["SEED_DEMO_DATA"]:
+                app.extensions["database_ready"] = True
                 return
 
             site = Site.query.filter_by(code="SITE-A").first()
@@ -32,6 +34,9 @@ def _initialize_database(app):
         except Exception:
             db.session.rollback()
             app.logger.exception("Database initialization failed")
+            return
+
+        app.extensions["database_ready"] = True
 
 def create_app(config_class=Config):
     app = Flask(__name__)

@@ -2,6 +2,7 @@
 {% block content %}
 <h4 class="fw-bold mb-4 text-center"><i class="bi bi-shield-fill-check"></i> Safety Portal Login</h4>
 <p class="text-center small mb-3" style="opacity:.8">Worker or Site Incharge</p>
+{% if login_error %}<div class="alert alert-danger">{{ login_error }}</div>{% endif %}
 <form method="POST">
   <div class="mb-3"><label class="form-label">Email</label>
     <input type="email" name="email" class="form-control" required placeholder="admin@oil.com or worker1@oil.com"></div>

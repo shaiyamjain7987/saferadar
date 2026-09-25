@@ -1,5 +1,6 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, current_app, render_template, request, redirect, url_for, flash
 from flask_login import login_user, logout_user, login_required, current_user
+from sqlalchemy.exc import SQLAlchemyError
 
 from . import auth_bp
 from ..extensions import db
@@ -17,7 +18,20 @@ def login():
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
-        user = User.query.filter_by(email=email).first()
+        if not current_app.secret_key:
+            current_app.logger.error("SECRET_KEY is not configured")
+            return render_template(
+                "auth/login.html",
+                login_error="Login is temporarily unavailable. Configure SECRET_KEY.",
+            ), 503
+
+        try:
+            user = User.query.filter_by(email=email).first()
+        except SQLAlchemyError:
+            db.session.rollback()
+            current_app.logger.exception("Login database query failed")
+            flash("Login is temporarily unavailable. Check the database configuration.", "danger")
+            return render_template("auth/login.html"), 503
 
         if user and user.check_password(password):
             login_user(user)
